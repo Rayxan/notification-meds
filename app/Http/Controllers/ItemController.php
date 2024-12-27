@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Item;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Http;
 
 class ItemController extends Controller
@@ -13,7 +15,7 @@ class ItemController extends Controller
      */
     public function index()
     {
-        return 'Item::find(1)';
+        return Item::get();
     }
 
     /**
@@ -29,12 +31,20 @@ class ItemController extends Controller
      */
     public function store(Request $request)
     {
-        Item::create([
-                'name' => $request->name,
-            ]
-        );
+        try {
+            $request->validate([
+               'name' => ['required', 'unique:items', 'max:255'],
+            ]);
 
-        return response()->json(['sucesso', 200]);
+            $createdItem =Item::create([
+                    'name' => $request->name,
+                ]
+            );
+
+            return $this->responseOK('The med was saved', $createdItem, Response::HTTP_CREATED);
+        } catch (\Throwable $e) {
+            return $this->responseFail($e->getMessage(), Response::HTTP_INTERNAL_SERVER_ERROR);
+        }
     }
 
     /**
@@ -42,7 +52,7 @@ class ItemController extends Controller
      */
     public function show(string $id)
     {
-        //
+        return Item::find($id)->get();
     }
 
     /**
@@ -56,9 +66,15 @@ class ItemController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, string $id)
+    public function update(Request $request, string $id): JsonResponse
     {
-        //
+        $item = Item::find($id);
+
+        $item->name = $request->name;
+
+        $item->save();
+
+         return $this->responseOK('The med was updated', '', Response::HTTP_OK);
     }
 
     /**
@@ -66,6 +82,10 @@ class ItemController extends Controller
      */
     public function destroy(string $id)
     {
-        //
+        $item = Item::find($id);
+
+        $item->delete();
+
+        return $this->responseFail('The med was deleted', [], Response::HTTP_CREATED);
     }
 }
